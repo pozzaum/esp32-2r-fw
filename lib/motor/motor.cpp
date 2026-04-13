@@ -21,15 +21,19 @@ void Motor::set_speed(uint16_t rpm){
 }
 
 void Motor::step_movement(int steps){
+    step_counter += steps;
     motor.step(steps);
 }
 
 void Motor::angle_movement(float angle){
-
+    int steps = steps_per_rev * angle / 360;
+    step_movement(steps);
 }
 
-void Motor::position_movement(float pos_x, float pos_y){
-
+void Motor::reset_position(){
+    step_movement(-step_counter);
 }
+
+
 
 Motor::~Motor(){}
