@@ -1,67 +1,47 @@
-#include "main.h"
+#include <AccelStepper.h>
+#include "defines.h"
 
-// Definições globais
-Motor shoulder(
-    SHOULDER_PIN1,
-    SHOULDER_PIN2,
-    SHOULDER_PIN3,
-    SHOULDER_PIN4,
-    SHOULDER_LOWER_LIMIT,
-    SHOULDER_UPPER_LIMIT,
-    STEPS_PER_REV
-);
-
-Motor elbow(
-    ELBOW_PIN1,
-    ELBOW_PIN2,
-    ELBOW_PIN3,
-    ELBOW_PIN4,
-    ELBOW_LOWER_LIMIT,
-    ELBOW_UPPER_LIMIT,
-    STEPS_PER_REV
-);
-
-BtClient btClient;
+// Configuração: usamos HALF4WIRE (8) para o 28BYJ-48 ficar mais suave
+// A ordem dos pinos DEVE SER: IN1, IN3, IN2, IN4
+AccelStepper shoulder(AccelStepper::HALF4WIRE, SHOULDER_PIN1, SHOULDER_PIN3, SHOULDER_PIN2, SHOULDER_PIN4);
+AccelStepper elbow(AccelStepper::HALF4WIRE, ELBOW_PIN1, ELBOW_PIN3, ELBOW_PIN2, ELBOW_PIN4);
 
 void setup() {
-    pinMode(BUTTON_PIN, INPUT_PULLUP);
-    Serial.begin(115200);
+  Serial.begin(115200);
+  Serial.println("Send two target positions separated by space (e.g. '1000 -500'):");
 
-    shoulder.set_speed(REV_RPM_SPEED);
-    elbow.set_speed(REV_RPM_SPEED);
-
-    btClient.begin("ESP32_2R");
-
-    Serial.println("Sistema iniciado.");
+  // Configurações do Motor 1
+  shoulder.setMaxSpeed(1000.0);      // Velocidade máxima (passos por segundo)
+  shoulder.setAcceleration(500.0);   // Aceleração
+  
+  // Configurações do Motor 2
+  elbow.setMaxSpeed(1000.0);
+  elbow.setAcceleration(500.0);
 }
 
 void loop() {
-    btClient.update();
+  // ESTES COMANDOS NÃO PODEM TER DELAY NO LOOP
+  // Eles precisam rodar "livres" para o motor girar macio
+  shoulder.run();
+  elbow.run();
 
-    if (btClient.hasNewCommand()) {
-        float theta1 = btClient.getTheta1();
-        float theta2 = btClient.getTheta2();
+  //Exemplo: Quando o motor 1 terminar, mande ele voltar
+  if (Serial.available() > 0) {
+    long targetShoulder = Serial.parseInt();
+    long targetElbow = Serial.parseInt();
 
-        Serial.print("Theta1 recebido: ");
-        Serial.println(theta1);
-
-        Serial.print("Theta2 recebido: ");
-        Serial.println(theta2);
-
-        // proteção física do ombro
-        if (theta1 < -90.0f || theta1 > 90.0f) {
-            Serial.println("Theta1 fora do limite fisico. Comando ignorado.");
-            btClient.clearNewCommandFlag();
-            return;
-        }
-
-        // Aqui, por enquanto, só exemplo direto:
-        shoulder.reset_position();
-        elbow.reset_position();
-
-        shoulder.angle_movement(theta1 * SHOULDER_REDUCTION_RATION);
-        elbow.angle_movement(theta2);
-
-        btClient.clearNewCommandFlag();
+    // Consume the rest of the line from the buffer
+    while (Serial.available() > 0) {
+      char c = Serial.read();
+      if (c == '\n') break;
     }
+
+    shoulder.moveTo(targetShoulder);
+    elbow.moveTo(targetElbow);
+    
+    Serial.print("Moving shoulder to: ");
+    Serial.print(targetShoulder);
+    Serial.print(" | elbow to: ");
+    Serial.println(targetElbow);
+  }
 }
