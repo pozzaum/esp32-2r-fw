@@ -19,7 +19,7 @@
 #define ELBOW_LOWER_LIMIT 0
 #define ELBOW_UPPER_LIMIT 180
 
-#define STEPS_PER_REV 2048  // 28BYJ-48 = 2048 passos por volta
+#define STEPS_PER_REV 4096  // 28BYJ-48 = 2048 passos por volta
 #define REV_RPM_SPEED 15    // velocidade otima
 
 #define BUTTON_PIN 34
